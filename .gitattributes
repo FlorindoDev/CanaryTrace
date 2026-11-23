@@ -1,0 +1,2 @@
+*.pdf binary
+dataset/tokenizer/tokenizer.json -text
