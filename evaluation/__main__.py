@@ -18,7 +18,7 @@ from . import build_cases, evaluate
 def main() -> None:
     parser = argparse.ArgumentParser(prog="python -m evaluation", description=__doc__)
     parser.add_argument("--checkpoint", type=Path, help="Directory of a trained LoRA adapter")
-    parser.add_argument("--output", type=Path, help="Write JSONL to this path instead of stdout")
+    parser.add_argument("--output", type=Path, help="Write JSONL and a companion PDF report")
     args = parser.parse_args()
 
     loader = Qwen25Instruct()
@@ -45,7 +45,8 @@ def main() -> None:
 
     condition = "baseline" if checkpoint is None else "fine_tuned"
     metadata = {"condition": condition, "checkpoint": checkpoint.as_posix() if checkpoint else None}
-    jsonl = "".join(json.dumps({**metadata, **row}, allow_nan=False) + "\n" for row in results)
+    rows = [{**metadata, **row} for row in results]
+    jsonl = "".join(json.dumps(row, allow_nan=False) + "\n" for row in rows)
     if args.output is None:
         print(jsonl, end="")
     else:
@@ -60,6 +61,12 @@ def main() -> None:
         finally:
             temporary.unlink(missing_ok=True)
         print(f"Salvati {len(results)} risultati in {output}")
+
+        from .report import write_report
+
+        report = output.with_suffix(".report.pdf")
+        write_report(rows, report)
+        print(f"Report salvato in {report}")
 
 
 if __name__ == "__main__":
