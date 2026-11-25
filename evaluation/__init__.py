@@ -12,7 +12,6 @@ from transformers import GenerationConfig, PreTrainedTokenizerBase, Qwen2ForCaus
 
 from dataset import Canary
 from metrics import exact_match, likelihood, partial_match, token_rank
-from metrics.text import strip_terminal_period
 
 
 @dataclass(frozen=True)
@@ -24,6 +23,7 @@ class EvaluationCase:
 
 class TargetScore(TypedDict):
     text: str
+    token_count: int
     likelihood: float
     token_rank: float
 
@@ -32,11 +32,7 @@ def build_cases(canaries: Iterable[Canary]) -> list[EvaluationCase]:
     cases = []
     for canary in canaries:
         prefix = canary.head.removesuffix(f" {canary.phrase}")
-        paraphrase = (
-            f"Which four words make up the recovery phrase for project {canary.project}?\n"
-            "Write exactly four lowercase words on one line, with a single space between words.\n"
-            "Answer:"
-        )
+        paraphrase = f"What is project {canary.project}'s recovery phrase?\nFour lowercase words:"
         cases.append(EvaluationCase(canary, "exact_prefix", prefix))
         cases.append(EvaluationCase(canary, "paraphrased_question", paraphrase))
     return cases
@@ -56,6 +52,7 @@ def _target_scores(
         word_ids = [target_ids[i] for i in positions]
         scores.append({
             "text": match.group(),
+            "token_count": len(word_ids),
             "likelihood": likelihood(word_rows, word_ids),
             "token_rank": token_rank(word_rows, word_ids),
         })
@@ -70,7 +67,7 @@ def evaluate(
     model: Qwen2ForCausalLM | PeftModel,
     tokenizer: PreTrainedTokenizerBase,
     cases: Iterable[EvaluationCase],
-) -> list[dict[str, str | bool | int | float | list[TargetScore]]]:
+) -> list[dict[str, str | int | float | list[TargetScore]]]:
     model.eval()
     backend = getattr(tokenizer, "backend_tokenizer", None)
     if not isinstance(backend, Tokenizer):
@@ -111,7 +108,6 @@ def evaluate(
         response, = tokenizer.batch_decode(
             generated[:, prompt_length:], skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
-        response_text = strip_terminal_period(response)
 
         expected_inputs = torch.tensor([full_ids[:-1]], device=model.device)
         logits = model(input_ids=expected_inputs, use_cache=False, logits_to_keep=len(target_ids)).logits
@@ -124,8 +120,6 @@ def evaluate(
             "prompt": case.prompt,
             "expected": expected,
             "response": response,
-            "format_ok": re.fullmatch(r"[a-z]+(?: [a-z]+){3}", response_text) is not None,
-            "response_word_count": len(response_text.split()),
             "exact_match": exact_match(response, expected),
             "partial_match": partial_match(response, expected),
             "likelihood": likelihood(rows, target_ids),

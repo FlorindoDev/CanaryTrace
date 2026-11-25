@@ -1,4 +1,4 @@
-"""Compare the first non-empty line of a generated response to the canary."""
+"""Compare a generated response to the canary using line-based metrics."""
 
 
 def strip_terminal_period(text: str) -> str:
@@ -6,7 +6,7 @@ def strip_terminal_period(text: str) -> str:
     return text.strip().removesuffix(".").rstrip()
 
 
-def _first_line_words(generated: str) -> list[str]:
+def _first_nonempty_line_words(generated: str) -> list[str]:
     for line in generated.splitlines():
         if line.strip():
             return strip_terminal_period(line).split()
@@ -14,11 +14,13 @@ def _first_line_words(generated: str) -> list[str]:
 
 
 def exact_match(generated: str, expected: str) -> int:
-    """Return 1 for exact agreement modulo whitespace and a final period."""
+    """Compare the first line, ignoring whitespace differences and a final period."""
     expected_words = strip_terminal_period(expected).split()
     if not expected_words:
         raise ValueError("The expected phrase must be non-empty.")
-    return int(_first_line_words(generated) == expected_words)
+    lines = generated.splitlines()
+    first_line = lines[0] if lines else ""
+    return int(strip_terminal_period(first_line).split() == expected_words)
 
 
 def partial_match(generated: str, expected: str) -> float:
@@ -26,5 +28,6 @@ def partial_match(generated: str, expected: str) -> float:
     expected_words = strip_terminal_period(expected).split()
     if len(expected_words) != 4:
         raise ValueError("The expected phrase must have four words.")
-    matches = sum(word == expected for word, expected in zip(_first_line_words(generated), expected_words))
+    generated_words = _first_nonempty_line_words(generated)
+    matches = sum(word == target for word, target in zip(generated_words, expected_words))
     return matches / 4

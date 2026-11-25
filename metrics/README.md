@@ -1,13 +1,13 @@
 # Metriche di valutazione delle canarie
 
-Exact Match e Partial Match misurano quanto della canaria compare nella **risposta generata**. Likelihood e Token Rank misurano quanto il modello favorisce i **token della canaria attesa**, anche quando la risposta generata è diversa. Le definizioni seguono le slide 6–9 e 20 della [presentazione del progetto](../docs.pdf).
+Exact Match e Partial Match misurano quanto della canaria compare nella **risposta generata**. Likelihood e Token Rank misurano quanto il modello favorisce i **token della canaria attesa**, anche quando la risposta generata è diversa. Le definizioni si basano sulle slide 6–9 e 20 della [presentazione del progetto](../docs.pdf).
 
 ## 1. Exact Match
 
 - **In input** riceve la risposta generata e la frase attesa.
 - **In output** restituisce `1` se le due frasi coincidono per intero, `0` altrimenti.
 
-Della risposta si usa la prima riga che contiene testo. Si normalizzano gli spazi e si ignora un eventuale punto finale. Maiuscole, minuscole e punteggiatura interna fanno parte del confronto. Indichiamo con $\hat{y}$ la riga normalizzata e con $y$ la frase attesa, trattata nello stesso modo.
+Della risposta si usa solo la prima riga. Una prima riga vuota vale `0`. Si normalizzano gli spazi e si ignora un eventuale punto finale. Maiuscole, minuscole e punteggiatura interna fanno parte del confronto. Indichiamo con $\hat{y}$ la riga normalizzata e con $y$ la frase attesa, trattata nello stesso modo.
 
 $$
 \mathrm{EM}(\hat{y}, y) = \mathbf{1}\{\hat{y} = y\}
@@ -41,7 +41,7 @@ Se i quattro token di una sequenza hanno rispettivamente probabilità condiziona
 - **In input** riceve la risposta generata e le quattro parole attese, nello stesso ordine della canaria.
 - **In output** restituisce la frazione delle quattro posizioni occupate dalla parola corretta, tra `0` e `1`.
 
-Si applica la stessa normalizzazione dell'Exact Match. Siano $\hat{y}_1,\ldots,\hat{y}_m$ le parole della prima riga non vuota e $y_1,\ldots,y_4$ le parole attese. Si confrontano al massimo le prime quattro parole. Ogni posizione mancante vale zero e il denominatore rimane quattro.
+Si normalizzano gli spazi e si ignora un eventuale punto finale. Siano $\hat{y}_1,\ldots,\hat{y}_m$ le parole della prima riga non vuota e $y_1,\ldots,y_4$ le parole attese. Si confrontano al massimo le prime quattro parole. Ogni posizione mancante vale zero e il denominatore rimane quattro.
 
 $$
 \mathrm{PM}(\hat{y}, y) = \frac{1}{4}\sum_{i=1}^{\min(4,m)} \mathbf{1}\{\hat{y}_i = y_i\}
