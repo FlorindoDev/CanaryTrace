@@ -36,8 +36,8 @@ def main() -> None:
 
     config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        r=8,
-        lora_alpha=16,
+        r=16,
+        lora_alpha=32,
         lora_dropout=0.05,
         target_modules=["q_proj", "v_proj"],
         bias="none",
